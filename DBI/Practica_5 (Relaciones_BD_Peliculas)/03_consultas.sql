@@ -11,7 +11,7 @@ SELECT * FROM actores_x_pelicula;
 UPDATE pelicula SET titulo = 'Parque Jurásico' WHERE id = 2;
 SELECT * FROM pelicula;
 
--- B. Dejar vacío (NULL) el campo director de las películas cuyo año de estreno 
+-- b. Dejar vacío (NULL) el campo director de las películas cuyo año de estreno 
 -- sea menor a 1995.
 UPDATE pelicula SET director = NULL WHERE anio_estreno < 1995;
 SELECT * FROM pelicula;
@@ -110,14 +110,15 @@ UNION 👉 apila resultados que solo coinciden en estructura
 -- y actor.
 SELECT CONCAT(a.nombre, ' ', a.apellido) AS nombre_completo,
 	   p.titulo AS pelicula
-FROM actores_x_película axp
+FROM actores_x_pelicula axp
 
--- Join con tabla actor
+-- Join con tabla actor por FK
 JOIN actor a ON axp.id_actor = a.id
 
--- Join con tabla pelicula
+-- Join con tabla pelicula por FK
 JOIN pelicula p ON axp.id_pelicula = p.id
 
+-- Ordenamiento
 ORDER BY p.titulo ASC, a.nombre ASC;
 
 
@@ -129,47 +130,55 @@ SELECT CONCAT(a.nombre, ' ', a.apellido) AS nombre_completo,
        
 FROM actores_x_pelicula AS axp
 
--- Join con tabla actor
+-- Join con tabla actor por FK
 JOIN actor AS a ON axp.id_actor = a.id
 
--- Join con tabla pelicula
+-- Join con tabla pelicula por FK
 JOIN pelicula AS p ON axp.id_pelicula = p.id
 
--- Join con tabla director
+-- Join con tabla director por FK
 JOIN director AS d ON p.director = d.id
 
--- Join con tabla pais
+-- Join con tabla pais por FK
 JOIN pais AS pa ON a.pais_nacimiento = pa.id
 
 -- Filtro
 WHERE d.id = 1
 
--- Ordeno
+-- Ordenamiento
 ORDER BY p.titulo ASC, a.nombre ASC;
 
 
 -- 3. Nombre de todos los directores que no estrenaron película en 2015 o 2020.
 
 
+
 -- 4. Nombre de directores junto con sus películas.
+
 
 
 -- 5. Igual que anterior, incluyendo directores sin películas.
 
 
+
 -- 6. Actores nacidos entre 1970 y 1990, con o sin película estrenada en 2020.
+
 
 -----------------------------------------------------------------------
 /* CONSULTAS ESTADÍSTICAS */
 
 -- 1. Total de películas.
-
+SELECT COUNT(*) AS total_peliculas
+FROM pelicula;
 
 -- 2. Número de directores (distintos) a partir de datos en películas.
-
+SELECT COUNT(DISTINCT director) AS total_directores
+FROM pelicula;
 
 -- 3. Mínimo y máximo valor de recaudación.
-
+SELECT MIN(recaudacion) AS minimo, 
+	   MAX(recaudacion) AS maximo
+FROM pelicula;
 
 -- 4. Código de la categoría cuya película tuvo menor recaudación.
 
@@ -181,6 +190,38 @@ ORDER BY p.titulo ASC, a.nombre ASC;
 
 
 -- 7. Categorías con promedio de recaudación superior a AR$ 500000.
+/*
+ORDEN CORRECTO DE EJECUCIÓN EN SQL
+1. FROM (armar el conjunto base de datos)
+2. JOIN (relacionar tablas)
+3. WHERE (filtrar filas crudas)
+4. GROUP BY (formar grupos)
+5. AGREGACIONES (AVG, SUM, MIN, MAX, COUNT, etc.)
+6. HAVING (filtrar grupos ya agregados)
+7. SELECT (elegir qué mostrar y calcular expresiones finales)
+8. DISTINCT (eliminar duplicados del resultado final)
+9. ORDER BY (ordenar el resultado final)
+10. LIMIT / OFFSET (recortar filas finales)
+*/
+
+--Tomo los nombres de las categorías
+SELECT c.nombre AS categoria,
+--Calculo y muestro los promedios de las recaudaciones de cada categoria
+-- uso ::numeric para asegurar precisión decimal en el cálculo
+-- especialmente cuando intervienen valores enteros.
+-- uso ROUND(x, 2) para mostrar el resultado con 2 decimales.
+	ROUND(AVG(p.recaudacion*1400)::numeric,2) AS promedio_ars
+FROM pelicula AS p
+
+--Join con la tabla categorias para reemplazar id_categoria por sus nombres.
+JOIN categoria AS c ON p.categoria = c.id
+
+-- Agrupo por categoría, uno todos los que son de la misma.
+GROUP BY c.id, c.nombre
+
+-- Filtro las categorías ya agrupadas, para quedarme las que necesito.
+HAVING AVG(p.recaudacion*1400)>500000;
+
 
 
 -- 8. Directores que estrenaron menos de 5 películas.
@@ -189,7 +230,13 @@ ORDER BY p.titulo ASC, a.nombre ASC;
 /* SUBCONSULTAS */
 
 -- 1. Películas cuya recaudación > promedio de recaudación de 2018.
-
+SELECT * FROM pelicula
+WHERE recaudacion > (
+	SELECT AVG(recaudacion) 
+	FROM pelicula 
+	WHERE anio_estreno = 2018
+);
+	
 -- 2. Directores que no hayan estrenado películas.
 
 -- 3. Nombre del director junto con el nombre y recaudación de su película más taquillera.
