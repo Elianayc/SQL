@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
-/* CONSULTAS SOBRA UNA TABLA */
+/* CONSULTAS SOBRE UNA TABLA */
 SELECT * FROM director;
 SELECT * FROM actor;
 SELECT * FROM pais;
