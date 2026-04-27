@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------------------
 /* CONSULTAS SOBRA UNA TABLA */
+/* CONSULTAS SOBRE UNA TABLA */
 SELECT * FROM director;
 SELECT * FROM actor;
 SELECT * FROM pais;
@@ -294,4 +295,8 @@ WHERE p.recaudacion = (
     WHERE p2.director = d.id
     );
 
+<<<<<<< HEAD
 -------------------------------------------------------------------------------------------
+=======
+----------------------------------------------------------------------
+>>>>>>> edf8cc69184bbdcbd1cc748b68a58a2381ebf117
