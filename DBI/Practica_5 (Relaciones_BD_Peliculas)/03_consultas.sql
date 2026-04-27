@@ -7,6 +7,20 @@ SELECT * FROM categoria;
 SELECT * FROM pelicula;
 SELECT * FROM actores_x_pelicula;
 
+/*
+ORDEN CORRECTO DE EJECUCIÓN EN SQL
+1. FROM (armar el conjunto base de datos)
+2. JOIN (relacionar tablas)
+3. WHERE (filtrar filas crudas)
+4. GROUP BY (formar grupos)
+5. AGREGACIONES (AVG, SUM, MIN, MAX, COUNT, etc.)
+6. HAVING (filtrar grupos ya agregados)
+7. SELECT (elegir qué mostrar y calcular expresiones finales)
+8. DISTINCT (eliminar duplicados del resultado final)
+9. ORDER BY (ordenar el resultado final)
+10. LIMIT / OFFSET (recortar filas finales)
+*/
+
 -- a. Corregir el nombre de la película cuyo id es 2.
 UPDATE pelicula SET titulo = 'Parque Jurásico' WHERE id = 2;
 SELECT * FROM pelicula;
@@ -75,9 +89,11 @@ WHERE titulo LIKE '%Max%';
 
 -- 13. Listar las películas cuyo año de estreno > 2010 y < 2016 o recaudación < 100 
 -- recaudación en millones USD.
-SELECT * FROM pelicula
-WHERE (anio_estreno > 2010 AND anio_estreno < 2016)
-OR recaudacion < 100;
+SELECT *
+FROM pelicula
+WHERE anio_estreno BETWEEN 2011 AND 2015
+   OR recaudacion < 100;
+-- Pongo esos años para incluir los que me piden. 
 
 -- 14. Listar actores nacidos en 1974 y de nacionalidad española España = id 5.
 SELECT * FROM actor
@@ -103,7 +119,8 @@ UNION 👉 apila resultados que solo coinciden en estructura
 (clientes + sucursales, por ejemplo) 
 */
 
-----------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+
 /* CONSULTAS MULTITABLA */
 
 -- 1. Listar nombre completo del elenco y nombre de películas. Orden por película 
@@ -120,7 +137,6 @@ JOIN pelicula p ON axp.id_pelicula = p.id
 
 -- Ordenamiento
 ORDER BY p.titulo ASC, a.nombre ASC;
-
 
 -- 2. Nombre completo, nacionalidad de todo el elenco y nombre de películas del director 
 -- con código 1.
@@ -148,23 +164,40 @@ WHERE d.id = 1
 -- Ordenamiento
 ORDER BY p.titulo ASC, a.nombre ASC;
 
-
 -- 3. Nombre de todos los directores que no estrenaron película en 2015 o 2020.
-
-
+SELECT d.nombre
+FROM director d
+WHERE d.id NOT IN (
+    SELECT p.director
+    FROM pelicula p
+    WHERE p.anio_estreno IN (2015, 2020)
+    );
 
 -- 4. Nombre de directores junto con sus películas.
-
-
+SELECT d.nombre AS director, p.titulo AS pelicula
+FROM director d
+JOIN pelicula p
+ON p.director = d.id;
 
 -- 5. Igual que anterior, incluyendo directores sin películas.
-
-
+SELECT d.nombre AS director, p.titulo AS pelicula
+FROM director d
+LEFT JOIN pelicula p
+ON p.director = d.id;
+-- Uso left para incluir a todos los directores.
 
 -- 6. Actores nacidos entre 1970 y 1990, con o sin película estrenada en 2020.
+SELECT a.*
+FROM actores a
+LEFT JOIN actores_x_pelicula axp
+  ON axp.id_actor = a.id
+LEFT JOIN pelicula p
+  ON p.id = axp.id_pelicula
+ AND p.anio_estreno = 2020
+WHERE a.anio_nacimiento BETWEEN 1970 AND 1990;
 
+-------------------------------------------------------------------------------------------
 
------------------------------------------------------------------------
 /* CONSULTAS ESTADÍSTICAS */
 
 -- 1. Total de películas.
@@ -181,36 +214,35 @@ SELECT MIN(recaudacion) AS minimo,
 FROM pelicula;
 
 -- 4. Código de la categoría cuya película tuvo menor recaudación.
-
+SELECT categoria
+FROM pelicula
+WHERE recaudacion = (
+    SELECT MIN(recaudacion)
+    FROM pelicula
+);
 
 -- 5. Número de películas estrenadas en 2018.
-
+SELECT COUNT(*) AS cantidad_peliculas
+FROM pelicula
+WHERE anio_estreno = 2018;
 
 -- 6. Número de películas por director.
-
+SELECT director,
+COUNT(*) AS cantidad_peliculas
+FROM pelicula
+GROUP BY director;
 
 -- 7. Categorías con promedio de recaudación superior a AR$ 500000.
-/*
-ORDEN CORRECTO DE EJECUCIÓN EN SQL
-1. FROM (armar el conjunto base de datos)
-2. JOIN (relacionar tablas)
-3. WHERE (filtrar filas crudas)
-4. GROUP BY (formar grupos)
-5. AGREGACIONES (AVG, SUM, MIN, MAX, COUNT, etc.)
-6. HAVING (filtrar grupos ya agregados)
-7. SELECT (elegir qué mostrar y calcular expresiones finales)
-8. DISTINCT (eliminar duplicados del resultado final)
-9. ORDER BY (ordenar el resultado final)
-10. LIMIT / OFFSET (recortar filas finales)
-*/
 
 --Tomo los nombres de las categorías
 SELECT c.nombre AS categoria,
+
 --Calculo y muestro los promedios de las recaudaciones de cada categoria
 -- uso ::numeric para asegurar precisión decimal en el cálculo
 -- especialmente cuando intervienen valores enteros.
 -- uso ROUND(x, 2) para mostrar el resultado con 2 decimales.
-	ROUND(AVG(p.recaudacion*1400)::numeric,2) AS promedio_ars
+ROUND(AVG(p.recaudacion*1400)::numeric,2) AS promedio_ars
+
 FROM pelicula AS p
 
 --Join con la tabla categorias para reemplazar id_categoria por sus nombres.
@@ -223,10 +255,15 @@ GROUP BY c.id, c.nombre
 HAVING AVG(p.recaudacion*1400)>500000;
 
 
-
 -- 8. Directores que estrenaron menos de 5 películas.
+SELECT director,
+COUNT(*) AS cantidad_peliculas
+FROM pelicula
+GROUP BY director
+HAVING COUNT(*) < 5;
 
-----------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
+
 /* SUBCONSULTAS */
 
 -- 1. Películas cuya recaudación > promedio de recaudación de 2018.
@@ -238,7 +275,23 @@ WHERE recaudacion > (
 );
 	
 -- 2. Directores que no hayan estrenado películas.
+SELECT d.*
+FROM director d
+LEFT JOIN pelicula p
+ON p.director = d.id
+WHERE p.director IS NULL;
 
 -- 3. Nombre del director junto con el nombre y recaudación de su película más taquillera.
+SELECT d.nombre AS director,
+       p.titulo,
+       p.recaudacion
+FROM director d
+JOIN pelicula p
+ON p.director = d.id
+WHERE p.recaudacion = (
+    SELECT MAX(p2.recaudacion)
+    FROM pelicula p2
+    WHERE p2.director = d.id
+    );
 
-----------------------------------------------------------------------
+-------------------------------------------------------------------------------------------
